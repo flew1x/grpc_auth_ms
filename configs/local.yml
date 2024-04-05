@@ -1,0 +1,16 @@
+grpc_port: 22000
+grpc_timeout: 5000
+
+logging_mode: "dev"
+
+pgsql_host: "postgres:5432"
+pgsql_user: "postgres"
+pgsql_password: "123456"
+pgsql_dbname: "authDB"
+pgsql_sslmode: "disable"
+pgsql_max_conns: 25
+pgsql_max_idle_conns: 25
+pgsql_max_conn_lifetime: "1h"
+
+jwt_expire_access_token: "5h"
+jwt_expire_refresh_token: "336h"
