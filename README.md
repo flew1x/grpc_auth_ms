@@ -50,6 +50,8 @@ Return `access_token` and `refresh_token` and `role`
 
 Return `access_token` and `refresh_token` and `role`
 
+#### Refresh access token
+
 ```http
   POST /v1/auth/refresh
 ```
@@ -59,9 +61,11 @@ Return `access_token` and `refresh_token` and `role`
 | `refresh_token` | `string` | **Required**. The refresh token              |
 | `role`          | `string` | **Required**. Role of the user - USER, ADMIN |
 
-#### Refresh current access token
+#### Refresh access token
 
 Return `access_token` and `refresh_token`
+
+#### Check is valid token
 
 ```http
   POST /v1/auth/check
@@ -72,7 +76,7 @@ Return `access_token` and `refresh_token`
 | `token`   | `string` | **Required**. The refresh token              |
 | `role`    | `string` | **Required**. Role of the user - USER, ADMIN |
 
-#### Check valid of token
+#### Return valid of token
 
 Return `valid` **bool** and `user_id` **string**
 
