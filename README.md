@@ -44,7 +44,7 @@ Return `access_token` and `refresh_token` and `role`
 | Parameter | Type     | Description                        |
 | :-------- | :------- | :--------------------------------- |
 | `email`   | `string` | **Required**. Email of the user    |
-| `role`    | `string` | **Required**. Password of the user |
+| `password` | `string` | **Required**. Password of the user |
 
 #### Log in user
 
