@@ -3,8 +3,8 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
-	"github.com/joho/godotenv"
 	"github.com/knadh/koanf"
 	"github.com/knadh/koanf/parsers/yaml"
 	"github.com/knadh/koanf/providers/file"
@@ -12,74 +12,64 @@ import (
 
 var cfg *koanf.Koanf
 
-// initConfig initializes the global config variable by loading
-// the config from the provided file path. It returns an error
-// if there was a problem loading the config.
-func initConfig() error {
-    configPath, err := getConfigPath()
-	if err != nil {
-		return err
-	}
-
-    cfg = koanf.New(".")
-    if err = cfg.Load(file.Provider(configPath), yaml.Parser()); err != nil {
-        go func() {
-            panic(fmt.Errorf("error loading config from %s: %w", configPath, err))
-        }()
-    }
-    return nil
+type Config struct {
+	GRPCConfig     IGRPCConfig
+	JWTConfig      IJWTConfig
+	LoggerConfig   ILoggerConfig
+	PostgresConfig IPostgresConfig
 }
 
-// getConfigPath returns the path to the config file.
+func NewConfig() *Config {
+	return &Config{}
+}
+
+// InitConfig initializes the global configuration by loading the
+// config from the given YAML file and parsing it.
+// It panics if there is an error loading or parsing the config.
+func (c *Config) InitConfig(configPath, configFile string) {
+	cfg = koanf.New(".")
+
+	filePath := filepath.Join(configPath, configFile)
+
+	config := file.Provider(filePath)
+
+	if err := cfg.Load(config, yaml.Parser()); err != nil {
+		panic("failed to load config: " + err.Error())
+	}
+
+	c.GRPCConfig = NewGRPCConfig()
+	c.JWTConfig = NewJWTConfig()
+	c.LoggerConfig = NewLoggerConfig()
+	c.PostgresConfig = NewPostgresConfig()
+}
+
+// MustStringFromEnv returns the value of the environment variable or panics if the environment variable is not set.
 //
-// If the CONFIG_PATH environment variable is set, its value is returned.
-// Otherwise, it tries to load the ".env" file and reads the value of the
-// CONFIG_PATH variable from it. If the value is still empty, an error is
-// returned.
-func getConfigPath() (string, error) {
-	const CONFIG_PATH = "CONFIG_PATH"
+// Parameters:
+// - field: the name of the environment variable to retrieve.
+//
+// Returns:
+// - string: the value of the environment variable.
+func mustStringFromEnv(field string) string {
+	envValue := os.Getenv(field)
 
-	path := os.Getenv(CONFIG_PATH)
-	if len(path) != 0 {
-		return path, nil
+	if envValue == "" {
+		panic(fmt.Sprintf("environment variable %s is not set", field))
 	}
 
-	err := godotenv.Load(".env")
-	if err != nil {
-		return "", err
+	return envValue
+}
+
+// MustUnmarshal unmarshals the field in the config or panics if the field does not exist.
+//
+// Parameters:
+// - field: the name of the field to retrieve.
+// - v: the pointer to the struct to unmarshal into.
+//
+// Returns:
+// - nil
+func mustUnmarshalStruct(field string, v any) {
+	if err := cfg.Unmarshal(field, v); err != nil {
+		panic(err)
 	}
-
-	path = os.Getenv(CONFIG_PATH)
-	if len(path) == 0 {
-		return "", fmt.Errorf("CONFIG_PATH not set in %s", ".env")
-	}
-
-	return path, nil
-}
-
-// init initializes the global config by calling initConfig and panicking
-// if there is an error. This ensures the config is loaded before the rest
-// of the application starts up.
-func init(){
-    if err := initConfig(); err != nil {
-        panic(err)
-    }
-}
-
-// MustString returns the string value for the given config field.
-// It panics if the key does not exist or the value is not a string.
-func MustString(field string) string{
-    return cfg.String(field)
-}
-
-// MustInt returns the int value for the given config field.
-// It panics if there is an error retrieving the value.
-func MustInt(field string) int{
-    return cfg.Int(field)
-}
-
-// MustFloat64 returns the float64 value for the given configuration field.
-// It panics if the value is not a float64.
-func MustFloat64(field string) float64 {
-    return cfg.Float64(field)
 }

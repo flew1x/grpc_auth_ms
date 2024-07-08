@@ -4,20 +4,37 @@ services:
     postgres:
       image: postgres:16.2-alpine
       container_name: postgres
-      restart: unless-stopped
+      restart: on-failure
+      env_file: .env
       environment:
-        - POSTGRES_USER=postgres
-        - POSTGRES_PASSWORD=123456
-        - POSTGRES_DB=authDB
+        - POSTGRES_USER=${DB_USER}
+        - POSTGRES_PASSWORD=${DB_PASSWORD}
+        - POSTGRES_DB=${DB_NAME}
       volumes:
-        - ./postgres/data:/var/lib/postgresql/data
+        - ./postgres-auth/data:/var/lib/postgresql/data
+      ports:
+        - "5432:5432"
+      networks:
+        - auth_network
+
     auth:
-      depends_on:
-        - postgres
+      image: auth
       build:
         context: .
         dockerfile: ./Dockerfile
       container_name: auth
-      restart: unless-stopped
+      env_file:
+        - .env
+      environment:
+        - POSTGRES_PASSWORD=${DB_PASSWORD}
+      restart: on-failure
       ports:
-        - 22001:22000
+        - "22000:22000"
+      depends_on:
+        - postgres
+      networks:
+        - auth_network
+
+networks:
+  auth_network:
+    driver: bridge

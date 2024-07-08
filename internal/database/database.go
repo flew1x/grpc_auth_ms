@@ -14,9 +14,31 @@ import (
 	"github.com/uptrace/bun/extra/bundebug"
 )
 
-// init initializes the database by creating tables if they don't exist.
-// This function should be called once on application start.
-func init() {
+type Client struct {
+	DB *bun.DB
+}
+
+// InitDatabase initializes the database with the given configuration.
+//
+// It creates a new context with a timeout of one minute. It then creates a slice
+// of tables to be created in the database. Each table is a new instance of an
+// entity struct.
+//
+// It opens a new database connection using the Open function with the given
+// configuration. It then iterates over each table and creates a new table in the
+// database using the NewCreateTable method of the database instance. If the table
+// already exists, it is not created again.
+//
+// Finally, it returns a new Client instance with the created database
+// instance.
+//
+// Parameters:
+// - config: an interface that implements the IPostgresConfig interface,
+// representing the configuration for the database connection.
+//
+// Returns:
+// - Client: a struct that contains the database instance.
+func InitDatabase(config config.IPostgresConfig) Client {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
@@ -24,37 +46,48 @@ func init() {
 		new(entity.User),
 	}
 
-	db := Open()
+	initedDatabase := Open(config)
+
 	for _, v := range tables {
-		if _, err := db.NewCreateTable().Model(v).IfNotExists().Exec(ctx); err != nil {
-			panic(fmt.Errorf("cannot init database: %v", err))
+		if _, err := initedDatabase.NewCreateTable().Model(v).IfNotExists().Exec(ctx); err != nil {
+			panic(ErrFailedToInitDB)
 		}
 	}
+
+	return Client{DB: initedDatabase}
 }
 
-
-// Open returns a database connection to the PostgreSQL database.
-// This function should be called once on application start.
-func Open() *bun.DB {
-	cfg := config.NewPostgresConfig()
+// Open creates a new database connection based on the provided configuration.
+//
+// It constructs the data source name (DSN) using the provided configuration,
+// opens a new database connection, and sets the maximum number of open
+// connections and the maximum lifetime of a connection.
+//
+// It also sets up a Bun database instance with the created connection and a new
+// instance of the PostgreSQL dialect.
+//
+// Finally, it adds a query hook to the database instance to log all queries.
+//
+// Parameters:
+//   - cfg: an interface that implements the IPostgresConfig interface,
+//     representing the configuration for the database connection.
+//
+// Returns:
+//   - *bun.DB: a pointer to a Bun database instance that can be used to
+//     perform database operations.
+func Open(cfg config.IPostgresConfig) *bun.DB {
 	dsn := fmt.Sprintf(
-		"postgres://%s@%s/%s?sslmode=%s",
-		cfg.GetUserInfo(),
-		cfg.GetHost(),
-		cfg.GetDatabaseName(),
-		cfg.GetSSLMode(),
+		AddressTemplate,
+		cfg.GetPostgresUserInfo(),
+		cfg.GetPostgresHost(),
+		cfg.GetPostgresDatabaseName(),
+		cfg.GetPostgresSSLMode(),
 	)
 
 	pgdb := sql.OpenDB(pgdriver.NewConnector(pgdriver.WithDSN(dsn)))
-
-	pgdb.SetMaxOpenConns(cfg.GetMaxConns())
-	pgdb.SetMaxIdleConns(cfg.GetMaxIdleConns())
-
-	duration, err := time.ParseDuration(cfg.GetMaxConnLifetime())
-	if err != nil {
-		panic(err)
-	}
-	pgdb.SetConnMaxLifetime(duration)
+	pgdb.SetMaxOpenConns(cfg.GetPostgresMaxCons())
+	pgdb.SetMaxIdleConns(cfg.GetPostgresMaxIdleCons())
+	pgdb.SetConnMaxLifetime(cfg.GetPostgresMaxConLifetime())
 
 	db := bun.NewDB(pgdb, pgdialect.New())
 	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))

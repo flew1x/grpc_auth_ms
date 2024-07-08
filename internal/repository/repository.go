@@ -1,21 +1,19 @@
 package repository
 
 import (
-	"log/slog"
 	authRepo "msauth/internal/repository/auth"
+	"msauth/pkg/logger"
 
 	"github.com/uptrace/bun"
 )
 
 type Repository struct {
-	logger           *slog.Logger
-	IAuthRespository authRepo.IAuthRespository
+	IAuthRepository authRepo.IAuthRepository
 }
 
 // NewRepository returns a new Repository instance with dependencies initialized.
-func NewRepository(db *bun.DB) *Repository {
+func NewRepository(logger logger.Logger, db *bun.DB) *Repository {
 	return &Repository{
-		logger:           slog.Default(),
-		IAuthRespository: authRepo.NewAuthRespository(db),
+		IAuthRepository: authRepo.NewRepository(logger, db),
 	}
 }

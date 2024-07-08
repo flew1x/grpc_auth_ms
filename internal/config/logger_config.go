@@ -1,17 +1,24 @@
 package config
 
-const loggingModeField = "logging_mode"
+const loggingPath = "logging"
 
 type ILoggerConfig interface {
+	// GetLoggingMode returns the logging mode
 	GetLoggingMode() string
 }
 
-type loggerConfig struct{}
-
-func NewLoggerConfig() ILoggerConfig {
-	return &loggerConfig{}
+type LoggerConfig struct {
+	Mode string `koanf:"mode"`
 }
 
-func (loggerConfig) GetLoggingMode() string {
-	return MustString(loggingModeField)
+func NewLoggerConfig() ILoggerConfig {
+	var loggerConfig LoggerConfig
+
+	mustUnmarshalStruct(loggingPath, &loggerConfig)
+
+	return &loggerConfig
+}
+
+func (c *LoggerConfig) GetLoggingMode() string {
+	return c.Mode
 }

@@ -7,12 +7,18 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type UserRole string
+type Role string
 
 const (
-	ADMIN_ROLE  UserRole = "ADMIN"
-	USER_ROLE   UserRole = "USER"
+	AdminRole   Role = "ADMIN"
+	UserRole    Role = "USER"
+	SuperRole   Role = "SUPER"
+	BlockedRole Role = "BLOCKED"
 )
+
+func (r Role) String() string {
+	return string(r)
+}
 
 // User - represents a user in the database
 // User represents a user in the database.
@@ -30,7 +36,7 @@ type User struct {
 	Password string `bun:"password,notnull" json:"password,omitempty"`
 
 	// Role is a role of the user.
-	Role UserRole `bun:"role,notnull" json:"role"`
+	Role Role `bun:"role,notnull" json:"role"`
 
 	// CreatedAt is a time when the user was created.
 	CreatedAt time.Time `bun:"created_at,nullzero,notnull,default:now()" json:"createdAt"`
@@ -41,4 +47,3 @@ type User struct {
 	// DeletedAt is a time when the user was deleted (if not null).
 	DeletedAt time.Time `bun:"soft_delete" json:"-"`
 }
-

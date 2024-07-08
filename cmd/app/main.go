@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"errors"
-	"log"
 	"msauth/internal/app"
 	"msauth/internal/config"
 	"msauth/pkg/logger"
@@ -14,37 +12,48 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var (
+	ErrGracefulStop = errors.New("graceful stop signal received")
+)
+
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	cfg := config.NewConfig()
+	cfg.InitConfig(os.Getenv("CONFIG_PATH"), os.Getenv("CONFIG_FILE"))
 
-	gracefulStopError := errors.New("graceful stop signal received")
+	newLogger := logger.InitLogger(cfg.LoggerConfig.GetLoggingMode())
 
-	loggerConfig := config.NewLoggerConfig()
-	logger := logger.InitLogger(loggerConfig.GetLoggingMode())
-
-	grpcConfig := config.NewGRPCConfig()
-	application, err := app.New(ctx, logger, grpcConfig)
+	application, err := app.New(newLogger, cfg)
 	if err != nil {
-		panic(err)
+		newLogger.Error("failed to create application", err)
+
+		return
 	}
 
-	var g errgroup.Group
-	g.Go(application.GRPCserver.Run)
-	g.Go(func() error { return gracefulStop(gracefulStopError) })
+	var errorGroup errgroup.Group
 
-	switch g.Wait() {
-	case gracefulStopError:
-		logger.Info(gracefulStopError.Error())
-		application.GRPCserver.Stop()
-		logger.Info("gracefully stopped")
+	errorGroup.Go(func() error {
+		return application.GRPCServer.Run()
+	})
+
+	errorGroup.Go(func() error {
+		return gracefulStop(ErrGracefulStop)
+	})
+
+	switch err = errorGroup.Wait(); {
+	case errors.Is(errorGroup.Wait(), ErrGracefulStop):
+		newLogger.Info(ErrGracefulStop.Error())
+
+		application.GRPCServer.Stop()
+
+		newLogger.Info("gracefully stopped")
 	default:
-		log.Fatalln(err)
+		newLogger.Error("failed to start the application", err)
 	}
 }
 
 func gracefulStop(gracefulStopError error) error {
 	stop := make(chan os.Signal, 1)
+
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 
 	<-stop

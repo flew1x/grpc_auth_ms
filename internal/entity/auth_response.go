@@ -1,14 +1,40 @@
 package entity
 
-// AuthResponse represents an authentication response.
+type IAuthResponse interface {
+	// GetAccessToken returns the access token.
+	GetAccessToken() string
+
+	// GetRefreshToken returns the refresh token.
+	GetRefreshToken() string
+
+	// GetRole returns the role.
+	GetRole() string
+}
+
+// AuthResponse represents the response from the authentication service.
 type AuthResponse struct {
-	// AccessToken is an access token that provides access to protected resources.
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
+	Role         string `json:"role"`
+}
 
-	AccessToken string `json:"access_token"`
+// NewAuthResponse creates a new AuthResponse.
+func NewAuthResponse(accessToken, refreshToken string, role Role) *AuthResponse {
+	return &AuthResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		Role:         string(role),
+	}
+}
 
-	// RefreshToken is a refresh token that can be used to get a new pair of access and refresh tokens.
-	RefreshToken string `json:"refresh_token"`
-	
-	// Role is an optional role of the user.
-	Role UserRole `json:"role"`
+func (a *AuthResponse) GetRole() string {
+	return a.Role
+}
+
+func (a *AuthResponse) GetAccessToken() string {
+	return a.AccessToken
+}
+
+func (a *AuthResponse) GetRefreshToken() string {
+	return a.RefreshToken
 }

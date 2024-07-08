@@ -1,32 +1,36 @@
 package config
 
 const (
-	grpcPortField    = "grpc_port"
-	grpcTimeoutField = "grpc_timeout"
-
-	userdataServiceHostField = "grpc_userdata_service_host"
+	grpcPath = "grpc"
 )
 
+// IGRPCConfig is the interface for GRPCConfig.
+//
+// It provides methods to get the necessary configuration values for the gRPC server.
 type IGRPCConfig interface {
-	GetPort() int
-	GetTimeout() int
-	GetUserdataServiceHost() string
+	// GetGRPCPort returns the gRPC port number.
+	GetGRPCPort() int
+
+	// GetGRPCTimeout returns the gRPC timeout value.
+	GetGRPCTimeout() int
 }
 
-type grpcConfig struct{}
-
-func NewGRPCConfig() IGRPCConfig {
-	return &grpcConfig{}
+type GRPCConfig struct {
+	GRPCPort    int `koanf:"port"`
+	GRPCTimeout int `koanf:"timeout"`
 }
 
-func (*grpcConfig) GetPort() int {
-	return MustInt(grpcPortField)
+func NewGRPCConfig() *GRPCConfig {
+	grpcConfig := &GRPCConfig{}
+	mustUnmarshalStruct(grpcPath, &grpcConfig)
+
+	return grpcConfig
 }
 
-func (*grpcConfig) GetTimeout() int {
-	return MustInt(grpcPortField)
+func (c *GRPCConfig) GetGRPCPort() int {
+	return c.GRPCPort
 }
 
-func (*grpcConfig) GetUserdataServiceHost() string {
-	return MustString(userdataServiceHostField)
+func (c *GRPCConfig) GetGRPCTimeout() int {
+	return c.GRPCTimeout
 }

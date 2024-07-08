@@ -3,8 +3,8 @@ package grpcauth
 import (
 	"context"
 	"errors"
-	"msauth/internal/api/grpc_api"
-	"msauth/internal/custom_errors"
+	"msauth/internal/api/grpcApi"
+	"msauth/internal/apperrors"
 	"msauth/internal/entity"
 	"msauth/internal/service"
 
@@ -14,20 +14,20 @@ import (
 )
 
 type authServerAPI struct {
-	grpc_api.UnimplementedAuthServer
-	service service.Service
+	grpcApi.UnimplementedAuthServer
+	service *service.Service
 }
 
 // RegisterServer registers the given AuthServerAPI instance with the provided
 // gRPC server. This allows the gRPC server to serve the auth related RPCs.
-func RegisterServer(grpcServer *grpc.Server, service service.Service) {
-	grpc_api.RegisterAuthServer(grpcServer, &authServerAPI{service: service})
+func RegisterServer(grpcServer *grpc.Server, service *service.Service) {
+	grpcApi.RegisterAuthServer(grpcServer, &authServerAPI{service: service})
 }
 
 // Register registers a new user. It validates the input, creates a User entity,
 // calls the AuthService's Register method, and handles any errors by returning
 // a gRPC error status. The token is returned on success.
-func (s *authServerAPI) Register(ctx context.Context, in *grpc_api.RegisterRequest) (*grpc_api.AuthResponse, error) {
+func (s *authServerAPI) Register(ctx context.Context, in *grpcApi.RegisterRequest) (*grpcApi.AuthResponse, error) {
 	switch {
 	case len(in.GetEmail()) == 0:
 		return nil, status.Error(codes.InvalidArgument, "email is required")
@@ -45,23 +45,27 @@ func (s *authServerAPI) Register(ctx context.Context, in *grpc_api.RegisterReque
 	authResp, err := s.service.AuthService.Register(ctx, user)
 	if err != nil {
 		switch {
-		case errors.Is(err, custom_errors.ErrUserExists):
+		case errors.Is(err, apperrors.ErrUserExists):
 			return nil, status.Error(codes.InvalidArgument, "user already exists")
-		case errors.Is(err, custom_errors.ErrInvalidCredentials):
+		case errors.Is(err, apperrors.ErrInvalidCredentials):
 			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
 		default:
 			return nil, status.Error(codes.Internal, "failed to register")
 		}
 	}
 
-	return &grpc_api.AuthResponse{RefreshToken: authResp.RefreshToken, AccessToken: authResp.AccessToken, Role: string(authResp.Role)}, nil
+	return &grpcApi.AuthResponse{
+		RefreshToken: authResp.GetRefreshToken(),
+		AccessToken:  authResp.GetAccessToken(),
+		Role:         authResp.GetRole(),
+	}, nil
 }
 
 // Login handles user login requests. It validates the input, checks
 // credentials against the data store, and returns a token on success.
 // Possible error cases include missing email/phone, missing password,
 // invalid credentials, and internal errors.
-func (s *authServerAPI) Login(ctx context.Context, in *grpc_api.LoginRequest) (*grpc_api.AuthResponse, error) {
+func (s *authServerAPI) Login(ctx context.Context, in *grpcApi.LoginRequest) (*grpcApi.AuthResponse, error) {
 	switch {
 	case len(in.GetEmail()) == 0:
 		return nil, status.Error(codes.InvalidArgument, "email is required")
@@ -79,16 +83,20 @@ func (s *authServerAPI) Login(ctx context.Context, in *grpc_api.LoginRequest) (*
 	authResp, err := s.service.AuthService.Login(ctx, user)
 	if err != nil {
 		switch {
-		case errors.Is(err, custom_errors.ErrUserNotFound):
+		case errors.Is(err, apperrors.ErrUserNotFound):
 			return nil, status.Error(codes.InvalidArgument, "user not found")
-		case errors.Is(err, custom_errors.ErrInvalidCredentials):
+		case errors.Is(err, apperrors.ErrInvalidCredentials):
 			return nil, status.Error(codes.InvalidArgument, "invalid credentials")
 		default:
 			return nil, status.Error(codes.Internal, "failed to login")
 		}
 	}
 
-	return &grpc_api.AuthResponse{RefreshToken: authResp.RefreshToken, AccessToken: authResp.AccessToken, Role: string(authResp.Role)}, nil
+	return &grpcApi.AuthResponse{
+		RefreshToken: authResp.GetRefreshToken(),
+		AccessToken:  authResp.GetAccessToken(),
+		Role:         authResp.GetRole(),
+	}, nil
 }
 
 // Refresh handles token refresh requests. It validates the input, checks the
@@ -113,31 +121,31 @@ func (s *authServerAPI) Login(ctx context.Context, in *grpc_api.LoginRequest) (*
 // - InvalidArgument: The refresh token has expired.
 // - InvalidArgument: The refresh token is not found in the data store.
 // - Internal: Failed to refresh token due to an internal error.
-func (s *authServerAPI) Refresh(ctx context.Context, in *grpc_api.RefreshRequest) (*grpc_api.RefreshResponse, error) {
+func (s *authServerAPI) Refresh(ctx context.Context, in *grpcApi.RefreshRequest) (*grpcApi.RefreshResponse, error) {
 	refreshToken := in.GetRefreshToken()
-	role := entity.UserRole(in.GetRole())
+	role := entity.Role(in.GetRole())
 	if len(refreshToken) == 0 || role == "" {
 		return nil, status.Error(codes.InvalidArgument, "refresh token and role is required")
 	}
 
-	accessToken, refreshToken, err := s.service.AuthService.Refresh(ctx, refreshToken, role)
+	accessToken, refreshToken, err := s.service.AuthService.Refresh(ctx, refreshToken)
 	if err != nil {
 		switch {
-		case errors.Is(err, custom_errors.ErrInvalidRefreshToken):
+		case errors.Is(err, apperrors.ErrInvalidRefreshToken):
 			return nil, status.Error(codes.InvalidArgument, "invalid refresh token")
-		case errors.Is(err, custom_errors.ErrInvalidRefreshTokenExpired):
+		case errors.Is(err, apperrors.ErrInvalidRefreshTokenExpired):
 			return nil, status.Error(codes.InvalidArgument, "refresh token expired")
-		case errors.Is(err, custom_errors.ErrInvalidRefreshTokenMalformed):
+		case errors.Is(err, apperrors.ErrInvalidRefreshTokenMalformed):
 			return nil, status.Error(codes.InvalidArgument, "invalid refresh token malformed")
 		default:
 			return nil, status.Error(codes.Internal, "failed to refresh token")
 		}
 	}
 
-	return &grpc_api.RefreshResponse{AccessToken: accessToken, RefreshToken: refreshToken}, nil
+	return &grpcApi.RefreshResponse{AccessToken: accessToken, RefreshToken: refreshToken}, nil
 }
 
-// CheckJWTSecretKey validates the input access token and role,
+// CheckJWT validates the input access token and role,
 // and checks the access token against the data store using the
 // AuthService's CheckJWTSecretKey method. Possible error cases
 // include missing role or access token, and internal errors.
@@ -156,17 +164,17 @@ func (s *authServerAPI) Refresh(ctx context.Context, in *grpc_api.RefreshRequest
 //
 // - InvalidArgument: The access token or role is empty.
 // - Internal: Failed to check JWT secret key due to an internal error.
-func (s *authServerAPI) CheckJWT(ctx context.Context, in *grpc_api.CheckJWTRequest) (*grpc_api.CheckJWTResponse, error) {
-	role := entity.UserRole(in.GetRole())
+func (s *authServerAPI) CheckJWT(ctx context.Context, in *grpcApi.CheckJWTRequest) (*grpcApi.CheckJWTResponse, error) {
+	role := entity.Role(in.GetRole())
 	accessToken := in.GetToken()
 	if role == "" || len(accessToken) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "role and access token is required")
 	}
 
-	valid, id, err := s.service.AuthService.CheckJWT(ctx, accessToken, role)
+	id, _, err := s.service.AuthService.CheckJWT(ctx, accessToken)
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to check jwt secret key")
 	}
 
-	return &grpc_api.CheckJWTResponse{Valid: valid, UserId: id.String()}, nil
+	return &grpcApi.CheckJWTResponse{Valid: true, UserId: id.String()}, nil
 }

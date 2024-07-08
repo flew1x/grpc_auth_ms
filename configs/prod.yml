@@ -1,0 +1,19 @@
+grpc:
+  port:
+  timeout:
+
+logging:
+  mode: "prod"
+
+jwt:
+  expire_access:
+  expire_refresh:
+
+postgres:
+  host:
+  user:
+  dbname:
+  sslmode:
+  max_conns:
+  max_idle_conns:
+  max_conn_lifetime:

@@ -2,63 +2,82 @@ package config
 
 import (
 	"net/url"
+	"time"
 )
 
 const (
-	pgHostField         = "pgsql_host"
-	pgUserField         = "pgsql_user"
-	pgPasswordField     = "pgsql_password"
-	pgDatabaseNameField = "pgsql_dbname"
-	pgSSLModeField      = "pgsql_sslmode"
-	maxConns            = "pgsql_max_conns"
-	maxIdleConns        = "pgsql_max_idle_conns"
-	maxConnsLifetime    = "pgsql_max_conn_lifetime"
+	pgPath             = "postgres"
+	pgPasswordFieldEnv = "PGSQL_PASSWORD"
 )
 
 type IPostgresConfig interface {
-	GetHost() string
-	GetUserInfo() *url.Userinfo
-	GetDatabaseName() string
-	GetSSLMode() string
-	GetMaxConns() int
-	GetMaxIdleConns() int
-	GetMaxConnLifetime() string
+	// GetPostgresHost returns the host for the postgres database.
+	GetPostgresHost() string
+
+	// GetPostgresUserInfo returns the user info for the postgres database.
+	GetPostgresUserInfo() *url.Userinfo
+
+	// GetPostgresDatabaseName returns the database name for the postgres database.
+	GetPostgresDatabaseName() string
+
+	// GetPostgresSSLMode returns the SSL mode for the postgres database.
+	GetPostgresSSLMode() string
+
+	// GetPostgresMaxCons returns the maximum number of connections for the postgres database.
+	GetPostgresMaxCons() int
+
+	// GetPostgresMaxIdleCons returns the maximum number of idle connections for the postgres database.
+	GetPostgresMaxIdleCons() int
+
+	// GetPostgresMaxConLifetime returns the maximum lifetime of a connection for the postgres database.
+	GetPostgresMaxConLifetime() time.Duration
 }
 
-type postgresConfig struct{}
-
-func NewPostgresConfig() IPostgresConfig {
-	return &postgresConfig{}
+type PostgresConfig struct {
+	Host            string        `koanf:"host"`
+	User            string        `koanf:"user"`
+	DatabaseName    string        `koanf:"dbname"`
+	SSLMode         string        `koanf:"sslmode"`
+	MaxConns        int           `koanf:"max_conns"`
+	MaxIdleConns    int           `koanf:"max_idle_conns"`
+	MaxConnLifetime time.Duration `koanf:"max_conn_lifetime"`
 }
 
-func (postgresConfig) GetHost() string {
-	return MustString(pgHostField)
+func NewPostgresConfig() *PostgresConfig {
+	postgresConfig := &PostgresConfig{}
+	mustUnmarshalStruct(pgPath, &postgresConfig)
+
+	return postgresConfig
 }
 
-func (postgresConfig) GetUserInfo() *url.Userinfo {
-	userInfo := url.UserPassword(
-		MustString(pgUserField),
-		MustString(pgPasswordField),
-	)
-	return userInfo
+func (c *PostgresConfig) GetPostgresHost() string {
+	return c.Host
 }
 
-func (postgresConfig) GetDatabaseName() string {
-	return MustString(pgDatabaseNameField)
+func (c *PostgresConfig) GetPostgresUserInfo() *url.Userinfo {
+	return url.UserPassword(c.User, mustStringFromEnv(pgPasswordFieldEnv))
 }
 
-func (postgresConfig) GetSSLMode() string {
-	return MustString(pgSSLModeField)
+func (c *PostgresConfig) GetPostgresDatabaseName() string {
+	return c.DatabaseName
 }
 
-func (postgresConfig) GetMaxConns() int {
-	return MustInt(maxConns)
+func (c *PostgresConfig) GetPostgresSSLMode() string {
+	return c.SSLMode
 }
 
-func (postgresConfig) GetMaxIdleConns() int {
-	return MustInt(maxIdleConns)
+func (c *PostgresConfig) GetPostgresMaxCons() int {
+	return c.MaxConns
 }
 
-func (postgresConfig) GetMaxConnLifetime() string {
-	return MustString(maxConnsLifetime)
+func (c *PostgresConfig) GetPostgresMaxIdleCons() int {
+	return c.MaxIdleConns
+}
+
+func (c *PostgresConfig) GetPostgresMaxConLifetime() time.Duration {
+	return c.MaxConnLifetime
+}
+
+func (c *PostgresConfig) GetPostgresPassword() string {
+	return mustStringFromEnv(pgPasswordFieldEnv)
 }

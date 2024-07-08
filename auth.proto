@@ -5,7 +5,7 @@ package grpc_api;
 
 import "google/api/annotations.proto";
 
-option go_package = "./internal/api/grpc_api";
+option go_package = "./internal/api/grpcApi";
 
 // Auth is a service that provides methods for user authentication.
 service Auth {
