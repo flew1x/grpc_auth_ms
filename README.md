@@ -63,7 +63,7 @@ Return `access_token` and `refresh_token` and `role`
 
 #### Refresh access token
 
-Return `access_token` and `refresh_token`
+Return `access_token`
 
 #### Check is valid token
 
