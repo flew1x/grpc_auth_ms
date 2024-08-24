@@ -5,7 +5,7 @@ package grpc_api;
 
 import "google/api/annotations.proto";
 
-option go_package = "./internal/api/grpcApi";
+option go_package = "./auth";
 
 // Auth is a service that provides methods for user authentication.
 service Auth {
@@ -85,9 +85,6 @@ message RefreshRequest {
 message RefreshResponse {
     // AccessToken is an access token that provides access to protected resources.
     string access_token = 1;
-
-    // RefreshToken is a refresh token that can be used to get a new pair of access and refresh tokens.
-    string refresh_token = 2;
 }
 
 // CheckJWTRequest is a request for the CheckJWT method.

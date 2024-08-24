@@ -28,3 +28,5 @@ go.work
 
 # Userdata
 postgres
+vendor
+postgres-auth-data

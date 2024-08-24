@@ -45,5 +45,5 @@ type User struct {
 	UpdatedAt time.Time `bun:"updated_at,nullzero,notnull,default:now()" json:"updatedAt"`
 
 	// DeletedAt is a time when the user was deleted (if not null).
-	DeletedAt time.Time `bun:"soft_delete" json:"-"`
+	DeletedAt time.Time `bun:"deleted_at,soft_delete" json:"-"`
 }

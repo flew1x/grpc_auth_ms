@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"msauth/internal/app"
 	"msauth/internal/config"
@@ -20,7 +21,9 @@ func main() {
 	cfg := config.NewConfig()
 	cfg.InitConfig(os.Getenv("CONFIG_PATH"), os.Getenv("CONFIG_FILE"))
 
-	newLogger := logger.InitLogger(cfg.LoggerConfig.GetLoggingMode())
+	parsedMode := logger.ParseMode(cfg.LoggerConfig.GetLoggingMode())
+	logLevel := logger.ConvertLoggerMode(parsedMode)
+	newLogger := logger.InitLogger(logLevel)
 
 	application, err := app.New(newLogger, cfg)
 	if err != nil {
@@ -33,6 +36,10 @@ func main() {
 
 	errorGroup.Go(func() error {
 		return application.GRPCServer.Run()
+	})
+
+	errorGroup.Go(func() error {
+		return application.RESTServer.RunREST(context.Background())
 	})
 
 	errorGroup.Go(func() error {

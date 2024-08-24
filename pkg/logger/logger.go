@@ -9,29 +9,29 @@ import (
 	"github.com/lmittmann/tint"
 )
 
+// LogLevel represents the severity of the log message.
+type LogLevel int
+
+const (
+	LevelDebug LogLevel = iota
+	LevelInfo
+	LevelWarn
+	LevelError
+)
+
+// Logger interface defines methods for structured logging.
 type Logger interface {
-	// Info logs an information message.
 	Info(description string, attributes ...any)
-
-	// Debug logs a debug message.
 	Debug(description string, attributes ...any)
-
-	// Error logs an error message.
 	Error(description string, err error, attributes ...any)
-
-	// Warn logs a warning message.
 	Warn(description string, attributes ...any)
-
-	// WithOperation adds an operation field to the logger.
 	WithOperation(operation string) Logger
-
-	// StringAttr adds a string attribute to the logger.
 	StringAttr(attribute string, value string) any
-
-	// AnyAttr adds an any attribute to the logger.
 	AnyAttr(attribute string, value any) any
+	With(attributes ...any) Logger
 }
 
+// Slogger is an implementation of Logger interface using slog.
 type Slogger struct {
 	logger *slog.Logger
 }
@@ -44,7 +44,7 @@ type Slogger struct {
 //
 // If mode is "production", it configures the logger for info level
 // logging to stdout.
-func InitLogger(mode string) *Slogger {
+func InitLogger(mode LogLevel) *Slogger {
 	options := &tint.Options{
 		Level:      slog.LevelDebug,
 		TimeFormat: time.Kitchen,
@@ -52,11 +52,15 @@ func InitLogger(mode string) *Slogger {
 
 	var handler slog.Handler
 
-	switch {
-	case mode == "dev":
+	switch mode {
+	case LevelDebug:
 		handler = tint.NewHandler(os.Stderr, options)
-	case mode == "prod":
+	case LevelInfo:
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+	case LevelWarn:
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn})
+	case LevelError:
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelError})
 	default:
 		handler = tint.NewHandler(os.Stderr, options)
 	}
@@ -77,23 +81,36 @@ func InitLogger(mode string) *Slogger {
 	}
 }
 
+// Debug logs a debug level message.
 func (l *Slogger) Debug(description string, attributes ...any) {
 	l.logger.Debug(description, attributes...)
 }
 
+// Info logs an info level message.
 func (l *Slogger) Info(description string, attributes ...any) {
 	l.logger.Info(description, attributes...)
 }
 
+// Error logs an error level message with the error details.
 func (l *Slogger) Error(description string, err error, attributes ...any) {
+	if err == nil {
+		attrs := append(attributes, slog.String("error", "nil"))
+
+		l.logger.Error(description, attrs...)
+
+		return
+	}
+
 	attrs := append(attributes, slog.String("error", err.Error()))
 	l.logger.Error(description, attrs...)
 }
 
+// Warn logs a warn level message.
 func (l *Slogger) Warn(description string, attributes ...any) {
 	l.logger.Warn(description, attributes...)
 }
 
+// WithOperation returns a new logger with the given operation name.
 func (l *Slogger) WithOperation(operation string) Logger {
 	newLogger := *l
 	newLogger.logger = newLogger.logger.With(slog.String("operation", operation))
@@ -101,10 +118,20 @@ func (l *Slogger) WithOperation(operation string) Logger {
 	return &newLogger
 }
 
+// With returns a new logger with the given attributes.
+func (l *Slogger) With(attributes ...any) Logger {
+	newLogger := *l
+	newLogger.logger = newLogger.logger.With(attributes...)
+
+	return &newLogger
+}
+
+// StringAttr returns a string attribute for logging.
 func (l *Slogger) StringAttr(attribute string, value string) any {
 	return slog.String(attribute, value)
 }
 
+// AnyAttr returns an any type attribute for logging.
 func (l *Slogger) AnyAttr(attribute string, value any) any {
 	return slog.Any(attribute, value)
 }

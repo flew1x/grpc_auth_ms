@@ -38,9 +38,9 @@ type IAuth interface {
 	// If a user is found, it returns a new copy of the user.
 	Login(ctx context.Context, user *entity.User) (entity.IAuthResponse, error)
 
-	// Refresh refreshes the access and refresh tokens.
-	// It returns the new access and refresh tokens.
-	Refresh(ctx context.Context, refToken string) (accessToken, refreshToken string, err error)
+	// Refresh refreshes the access and refresh token.
+	// It returns the new access token.
+	Refresh(ctx context.Context, refToken string) (accessToken string, err error)
 
 	// CheckJWT checks the JWT token and returns the user ID and role.
 	// It returns the user ID and role.
@@ -562,7 +562,7 @@ func (a *AuthService) parseToken(ctx context.Context, refToken string) (*jwt.Tok
 // database using the id in the token and generates a new access token for the user.
 //
 // If the refresh token is invalid or something goes wrong, it returns an error.
-func (a *AuthService) Refresh(ctx context.Context, refToken string) (accessToken, refreshToken string, err error) {
+func (a *AuthService) Refresh(ctx context.Context, refToken string) (accessToken string, err error) {
 	const op = "Refresh"
 	operation := a.logger.WithOperation(op)
 
@@ -590,33 +590,33 @@ func (a *AuthService) Refresh(ctx context.Context, refToken string) (accessToken
 			}
 		}
 
-		return "", "", err
+		return "", err
 	}
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
 		operation.Warn("invalid refresh token claims", "claims", claims, "token_valid", token.Valid)
 
-		return "", "", apperrors.ErrInvalidAccessToken
+		return "", apperrors.ErrInvalidAccessToken
 	}
 
 	isRefresh, ok := claims["is_refresh"].(bool)
 	if !ok || !isRefresh {
 		operation.Error("invalid refresh token", apperrors.ErrInvalidRefreshToken)
 
-		return "", "", fmt.Errorf("%s: %w", operation, apperrors.ErrInvalidRefreshToken)
+		return "", fmt.Errorf("%s: %w", operation, apperrors.ErrInvalidRefreshToken)
 	}
 
-	refreshToken, accessToken, err = a.genTokens(user, op)
+	accessToken, err = a.genAccessToken(user.ID, op)
 	if err != nil {
 		operation.Error("failed to generate tokens", err)
 
-		return "", "", fmt.Errorf("%s: %w", operation, err)
+		return "", fmt.Errorf("%s: %w", operation, err)
 	}
 
-	operation.Info("tokens generated", "refresh_token", refreshToken, "access_token", accessToken)
+	operation.Info("tokens generated", "access_token", accessToken)
 
-	return accessToken, refreshToken, nil
+	return accessToken, nil
 }
 
 // CheckJWT validates the access token by decoding it and checking if it's a valid

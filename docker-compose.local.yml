@@ -1,0 +1,12 @@
+version: "3.9"
+
+services:
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.local
+
+  postgres:
+    env_file: .env.local

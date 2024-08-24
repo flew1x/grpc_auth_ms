@@ -2,6 +2,7 @@ package app
 
 import (
 	"msauth/internal/app/grpcapp"
+	"msauth/internal/app/restapp"
 	"msauth/internal/config"
 	"msauth/internal/database"
 	"msauth/internal/repository"
@@ -11,6 +12,7 @@ import (
 
 type App struct {
 	GRPCServer *grpcapp.App
+	RESTServer *restapp.RestApp
 }
 
 // New creates a new App instance. It initializes the database, repositories,
@@ -27,6 +29,7 @@ func New(logger logger.Logger, cfg *config.Config) (*App, error) {
 	newService := service.NewService(logger, newRepository, cfg)
 
 	grpcApp := grpcapp.New(logger, newService, cfg)
+	restApp := restapp.New(logger, cfg.RESTConfig.GetRestHost(), cfg.GRPCConfig)
 
-	return &App{GRPCServer: grpcApp}, nil
+	return &App{GRPCServer: grpcApp, RESTServer: restApp}, nil
 }

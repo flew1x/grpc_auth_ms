@@ -3,10 +3,10 @@ package grpcauth
 import (
 	"context"
 	"errors"
-	"msauth/internal/api/grpcApi"
 	"msauth/internal/apperrors"
 	"msauth/internal/entity"
 	"msauth/internal/service"
+	"msauth/pkg/proto/auth"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -14,20 +14,20 @@ import (
 )
 
 type authServerAPI struct {
-	grpcApi.UnimplementedAuthServer
+	auth.UnimplementedAuthServer
 	service *service.Service
 }
 
 // RegisterServer registers the given AuthServerAPI instance with the provided
 // gRPC server. This allows the gRPC server to serve the auth related RPCs.
 func RegisterServer(grpcServer *grpc.Server, service *service.Service) {
-	grpcApi.RegisterAuthServer(grpcServer, &authServerAPI{service: service})
+	auth.RegisterAuthServer(grpcServer, &authServerAPI{service: service})
 }
 
 // Register registers a new user. It validates the input, creates a User entity,
 // calls the AuthService's Register method, and handles any errors by returning
 // a gRPC error status. The token is returned on success.
-func (s *authServerAPI) Register(ctx context.Context, in *grpcApi.RegisterRequest) (*grpcApi.AuthResponse, error) {
+func (s *authServerAPI) Register(ctx context.Context, in *auth.RegisterRequest) (*auth.AuthResponse, error) {
 	switch {
 	case len(in.GetEmail()) == 0:
 		return nil, status.Error(codes.InvalidArgument, "email is required")
@@ -54,7 +54,7 @@ func (s *authServerAPI) Register(ctx context.Context, in *grpcApi.RegisterReques
 		}
 	}
 
-	return &grpcApi.AuthResponse{
+	return &auth.AuthResponse{
 		RefreshToken: authResp.GetRefreshToken(),
 		AccessToken:  authResp.GetAccessToken(),
 		Role:         authResp.GetRole(),
@@ -65,7 +65,7 @@ func (s *authServerAPI) Register(ctx context.Context, in *grpcApi.RegisterReques
 // credentials against the data store, and returns a token on success.
 // Possible error cases include missing email/phone, missing password,
 // invalid credentials, and internal errors.
-func (s *authServerAPI) Login(ctx context.Context, in *grpcApi.LoginRequest) (*grpcApi.AuthResponse, error) {
+func (s *authServerAPI) Login(ctx context.Context, in *auth.LoginRequest) (*auth.AuthResponse, error) {
 	switch {
 	case len(in.GetEmail()) == 0:
 		return nil, status.Error(codes.InvalidArgument, "email is required")
@@ -92,7 +92,7 @@ func (s *authServerAPI) Login(ctx context.Context, in *grpcApi.LoginRequest) (*g
 		}
 	}
 
-	return &grpcApi.AuthResponse{
+	return &auth.AuthResponse{
 		RefreshToken: authResp.GetRefreshToken(),
 		AccessToken:  authResp.GetAccessToken(),
 		Role:         authResp.GetRole(),
@@ -121,14 +121,14 @@ func (s *authServerAPI) Login(ctx context.Context, in *grpcApi.LoginRequest) (*g
 // - InvalidArgument: The refresh token has expired.
 // - InvalidArgument: The refresh token is not found in the data store.
 // - Internal: Failed to refresh token due to an internal error.
-func (s *authServerAPI) Refresh(ctx context.Context, in *grpcApi.RefreshRequest) (*grpcApi.RefreshResponse, error) {
+func (s *authServerAPI) Refresh(ctx context.Context, in *auth.RefreshRequest) (*auth.RefreshResponse, error) {
 	refreshToken := in.GetRefreshToken()
 	role := entity.Role(in.GetRole())
 	if len(refreshToken) == 0 || role == "" {
 		return nil, status.Error(codes.InvalidArgument, "refresh token and role is required")
 	}
 
-	accessToken, refreshToken, err := s.service.AuthService.Refresh(ctx, refreshToken)
+	accessToken, err := s.service.AuthService.Refresh(ctx, refreshToken)
 	if err != nil {
 		switch {
 		case errors.Is(err, apperrors.ErrInvalidRefreshToken):
@@ -142,7 +142,7 @@ func (s *authServerAPI) Refresh(ctx context.Context, in *grpcApi.RefreshRequest)
 		}
 	}
 
-	return &grpcApi.RefreshResponse{AccessToken: accessToken, RefreshToken: refreshToken}, nil
+	return &auth.RefreshResponse{AccessToken: accessToken}, nil
 }
 
 // CheckJWT validates the input access token and role,
@@ -164,7 +164,7 @@ func (s *authServerAPI) Refresh(ctx context.Context, in *grpcApi.RefreshRequest)
 //
 // - InvalidArgument: The access token or role is empty.
 // - Internal: Failed to check JWT secret key due to an internal error.
-func (s *authServerAPI) CheckJWT(ctx context.Context, in *grpcApi.CheckJWTRequest) (*grpcApi.CheckJWTResponse, error) {
+func (s *authServerAPI) CheckJWT(ctx context.Context, in *auth.CheckJWTRequest) (*auth.CheckJWTResponse, error) {
 	role := entity.Role(in.GetRole())
 	accessToken := in.GetToken()
 	if role == "" || len(accessToken) == 0 {
@@ -176,5 +176,5 @@ func (s *authServerAPI) CheckJWT(ctx context.Context, in *grpcApi.CheckJWTReques
 		return nil, status.Error(codes.Internal, "failed to check jwt secret key")
 	}
 
-	return &grpcApi.CheckJWTResponse{Valid: true, UserId: id.String()}, nil
+	return &auth.CheckJWTResponse{Valid: true, UserId: id.String()}, nil
 }

@@ -2,6 +2,9 @@ grpc:
   port:
   timeout:
 
+rest:
+  port:
+
 logging:
   mode: "prod"
 

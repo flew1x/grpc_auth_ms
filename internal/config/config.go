@@ -17,6 +17,7 @@ type Config struct {
 	JWTConfig      IJWTConfig
 	LoggerConfig   ILoggerConfig
 	PostgresConfig IPostgresConfig
+	RESTConfig     IRESTConfig
 }
 
 func NewConfig() *Config {
@@ -41,6 +42,7 @@ func (c *Config) InitConfig(configPath, configFile string) {
 	c.JWTConfig = NewJWTConfig()
 	c.LoggerConfig = NewLoggerConfig()
 	c.PostgresConfig = NewPostgresConfig()
+	c.RESTConfig = NewRESTConfig()
 }
 
 // MustStringFromEnv returns the value of the environment variable or panics if the environment variable is not set.

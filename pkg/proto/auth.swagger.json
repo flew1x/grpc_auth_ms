@@ -1,0 +1,285 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "auth.proto",
+    "description": "Package grpc_api contains API definitions for gRPC service.",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "Auth"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/auth/check": {
+      "post": {
+        "summary": "CheckJWT checks if the provided JWT token is valid and returns user ID.",
+        "operationId": "Auth_CheckJWT",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/grpc_apiCheckJWTResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "CheckJWTRequest is a request for the CheckJWT method.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/grpc_apiCheckJWTRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "summary": "Login logs in an existing user and returns a pair of access and refresh tokens.",
+        "operationId": "Auth_Login",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/grpc_apiAuthResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "LoginRequest is a request for the Login method.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/grpc_apiLoginRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "summary": "Refresh returns a new pair of access and refresh tokens based on the provided refresh token.",
+        "operationId": "Auth_Refresh",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/grpc_apiRefreshResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "RefreshRequest is a request for the Refresh method.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/grpc_apiRefreshRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/v1/auth/register": {
+      "post": {
+        "summary": "Register creates a new user and returns a pair of access and refresh tokens.",
+        "operationId": "Auth_Register",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/grpc_apiAuthResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "description": "RegisterRequest is a request for the Register method.",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/grpc_apiRegisterRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Auth"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "grpc_apiAuthResponse": {
+      "type": "object",
+      "properties": {
+        "accessToken": {
+          "type": "string",
+          "description": "AccessToken is an access token that provides access to protected resources."
+        },
+        "refreshToken": {
+          "type": "string",
+          "description": "RefreshToken is a refresh token that can be used to get a new pair of access and refresh tokens."
+        },
+        "role": {
+          "type": "string",
+          "description": "Role is an optional role of the user."
+        }
+      },
+      "description": "AuthResponse is a response for the Register and Login methods."
+    },
+    "grpc_apiCheckJWTRequest": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "description": "Token is a JWT token that was returned by the Login or Register methods."
+        },
+        "role": {
+          "type": "string",
+          "description": "Role is an optional role of the user."
+        }
+      },
+      "description": "CheckJWTRequest is a request for the CheckJWT method."
+    },
+    "grpc_apiCheckJWTResponse": {
+      "type": "object",
+      "properties": {
+        "valid": {
+          "type": "boolean",
+          "description": "Valid is true if the provided token is valid."
+        },
+        "userId": {
+          "type": "string",
+          "description": "UserID is the ID of the user that the token belongs to."
+        }
+      },
+      "description": "CheckJWTResponse is a response for the CheckJWT method."
+    },
+    "grpc_apiLoginRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email is an optional email address of the user."
+        },
+        "password": {
+          "type": "string",
+          "description": "Password is a password of the user."
+        }
+      },
+      "description": "LoginRequest is a request for the Login method."
+    },
+    "grpc_apiRefreshRequest": {
+      "type": "object",
+      "properties": {
+        "refreshToken": {
+          "type": "string",
+          "description": "RefreshToken is a refresh token that was returned by the Login or Register methods."
+        },
+        "role": {
+          "type": "string",
+          "description": "Role is an optional role of the user."
+        }
+      },
+      "description": "RefreshRequest is a request for the Refresh method."
+    },
+    "grpc_apiRefreshResponse": {
+      "type": "object",
+      "properties": {
+        "accessToken": {
+          "type": "string",
+          "description": "AccessToken is an access token that provides access to protected resources."
+        }
+      },
+      "description": "RefreshResponse is a response for the Refresh method."
+    },
+    "grpc_apiRegisterRequest": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email is an optional email address of the user."
+        },
+        "password": {
+          "type": "string",
+          "description": "Password is a password of the user."
+        }
+      },
+      "description": "RegisterRequest is a request for the Register method."
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}
